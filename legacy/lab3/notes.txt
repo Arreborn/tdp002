@@ -1,0 +1,120 @@
+Notes:
+
+Main program:
+     - Accepts a seed, used for shuffling [int]
+       - Will not go forward without a seed
+       - Can generate a random seed through the card.random_seed() function
+         - Is located in the card-module as the seed is only used for a function there, shouldn't break abstraction
+
+     - Generates a deck with card.create_solitaire_deck()
+       - This function runs the function create_deck(), that creates a full deck
+       - The function then trims that deck to ensure we have two suits and two jokers
+       - The returned list includes 28 cards, two full suits and two jokers
+
+     - Shuffles the deck with the random seed, using the card.shuffle_deck() function
+     - After the deck is shuffled, the program copies the shuffled deck to deck2 as well as a saved deck
+     - Program asks for a message to encrypt, prints the message
+     - Runs the encrypt-function
+     - Prints the encrypted message, runs the decrypt-function
+     - Prints the decrypted message
+
+Card-module:
+Functions in this module handles cards and decks, as well as moving or shuffling cards
+     - random_seed()
+       - Generates and returns a random seed, used when the user doesn't want to enter one
+
+     - create_deck()
+       - Creates a full deck, all four suits and two jokers
+
+     - create_solitaire_deck()
+       - This function uses the create_deck()-function to generate a full deck
+       - After that, we filter out two suits and the jokers, append them to a list that is returned
+
+     - get_card_position(deck, index) [list, int]
+       - Returns the index of the current card
+         - Am I even using this?
+
+     - get_value(card) [tuple]
+       - Accepts a tuple from the deck, and returns the program value of the card
+         - First suit (e.g. hearts) has the values 1 (for ace) through 13 (for king)
+         - Second suit (e.g. spades) has the values 1 + 13 (for ace) through 13 + 13 (for king)
+         - Jokers have the inherent value 27 and no suit
+
+     - shuffle_deck(deck, seed) [list, int]
+       - Applies the current seed to ensure identical shuffles
+       - Uses the random.shuffle() function to randomize the list
+
+     - move_card(deck, destination, origin) [list, int, int]
+       - Accepts a list, and an index the card is to be moved to, and the index it is to be moved from
+       - Uses the list.insert() method with the index the card is to be inserted at
+       - In the list.insert() method, we use the list.pop() method to both remove the card from the selected index and return its value
+
+     - switch_deck(deck to move cards into, deck to move cards from) [list, list]
+       - Used when cutting the deck
+       - To ensure we cut the deck in the exact order the cards are in the original deck, we move them to a new deck
+       - This function is also called to move the cards back in the exact same order when the cut deck is reassembled
+       - It always moves the first card in the origin-deck, and appends it to the end of the destination-deck 
+
+Solitaire-module:
+This module handles the generation of encryption-keys, and the encryption and decrytption of messages
+
+     - letters()
+       - This function generates a list of letters, that is used in the other functions
+       - Returns a list with all capital letters from A - Z
+
+     - solitaire_keystream(deck, message) [list, string]
+       - This function generates the encryption key that is used for the encryption and decryption of messages
+         - We begin by storing a list of letters through the function with the same name
+         - We also declare the encryption_key-variable, which will store the encryption key and return it
+         - The rest of the code is run in a loop as long as the encryption key is not the same length as the supplied message
+
+         - In the loop, we begin by finding the index of the jokers using the card.get_value() function, looping through the stored deck
+         - The index of jokers in the deck will be stored locally in a list as their position is paramount for the rest of the algorithm
+         - This might break abstraction - but a function can possibly be written to generate and store these in the card-module
+
+         - Next, we move the jokers in accordance with the algorithms rules
+         - The first joker in the deck is henceforth referred to as A, the second joker in the deck is referred to as B
+           - If A is at the bottom of the deck (index 27), we place it under the first card in the deck (index 1)
+           - Else, if A is anywhere else in the deck, it is moved one step down in the deck
+           - If B is at the bottom of the deck (index 27), it is placed under the second card i the deck (index 2)
+           - If B is the second to last card in the deck, we place it under the first card in the deck (index 1)
+           - Else, if B is anywhere else in the deck, it is moved two steps down in the deck
+
+         - We will now cut the deck into three separate piles, referred to as deck_a, deck_b and deck_c
+           - Deck_a gets all cards up to, but not including A
+           - Deck_b gets all cards from A, up to and including B
+           - Deck_c gets the rest of the cards
+
+         - Moving the cards is done with loops, utilizing the card.get_value() function to identify the jokers
+         - The cards are then moved to their respective deck with the card.switch_deck() function
+         - After the deck has been successfully cut, they are reassembled with the same function in the following order:
+           - C, B, A
+
+         - We will now fetch the value of the last card (index 27) with the card.get_value() function
+         - We will move as many cards as the value of the last card indicates from the top of the deck
+         - They will be placed at the second to last position in the deck
+
+         - Last but not least, we will fetch the value of the top card (index 0)
+         - If the top card is a joker, this loop has not generated a key, and the loop begins anew
+
+         - The value of the top card indicates the numeric value of the letter that will be used for this letter in the encryption key
+           - For instance, if the value of the top card is 5, we want to select the value of the sixth card in the deck
+           - Coincidentally, this card will be at the same index as the value, since the index starts at 0
+
+         - We append the letter corresponding to the selected value to the encryption key, and the loop begins anew
+         - The loop continues as long as the length of the encryption key is less than the length of the supplied message
+
+         - When the loop breaks, and the key is the same length as the message, the function returns the encryption key
+
+     - encrypt_message(deck, message) [list, string]
+       - This function accepts a deck and a message, and uses the deck to generate an encryption key the same length as the message
+       - The function also generates and stores a list of the alphabet using the letters() function
+       - The encryption key is then used to encrypt the message using the following logic
+
+       - The function generates two lists, and these will store the numeric value of the letter in the message and key respectively
+       - We will then loop through all the numbers in the key and the message, and add these numbers together
+       - If the resulting number is greater than 26, we subtract 26 from the total
+
+       - We now have a number between 1 - 26, which corresponds to a numeric value of a letter
+       - We can use this number - 1 to find the letter in the alphabet-list and append it to the decrypted message
+       - The decrypted message is then returned
